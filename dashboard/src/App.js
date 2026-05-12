@@ -66,12 +66,22 @@ function App() {
 
     peerConnection.current.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log("Sending ICE candidate to", streamerId);
         socket.current.emit('ice-candidate', {
           candidate: event.candidate,
           target: streamerId,
           roomId: ROOM_ID
         });
       }
+    };
+
+    peerConnection.current.onconnectionstatechange = (event) => {
+      console.log("Connection state change:", peerConnection.current.connectionState);
+      setStatus("Connection: " + peerConnection.current.connectionState);
+    };
+
+    peerConnection.current.oniceconnectionstatechange = (event) => {
+      console.log("ICE connection state change:", peerConnection.current.iceConnectionState);
     };
 
     peerConnection.current.ontrack = (event) => {
