@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">RemoteMonitor</string>
+    <string name="signaling_server_url">http://10.0.2.2:3000</string> <!-- Use 10.0.2.2 for emulator, or your IP for physical phone -->
+</resources>

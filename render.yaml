@@ -1,0 +1,27 @@
+services:
+  # Signaling Server (Backend)
+  - type: web
+    name: remotemonitor-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    rootDir: backend
+    envVars:
+      - key: PORT
+        value: 3000
+
+  # Dashboard (Frontend)
+  - type: static
+    name: remotemonitor-dashboard
+    env: static
+    plan: free
+    buildCommand: npm install && npm run build
+    publishPath: build
+    rootDir: dashboard
+    envVars:
+      - key: REACT_APP_SIGNALING_SERVER
+        fromService:
+          type: web
+          name: remotemonitor-backend
+          property: host
