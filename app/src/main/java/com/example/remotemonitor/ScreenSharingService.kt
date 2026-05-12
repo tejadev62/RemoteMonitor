@@ -41,6 +41,8 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
         return START_STICKY
     }
 
+    private var currentViewerId: String? = null
+
     private fun setupSocket() {
         val serverUrl = getString(R.string.signaling_server_url)
         socket = IO.socket(serverUrl)
@@ -51,21 +53,15 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
         }
 
         socket.on("viewer-joined") { args ->
-            val viewerId = args[0] as String
+            currentViewerId = args[0] as String
             webRtcManager.createPeerConnection()
+            webRtcManager.createOffer() // Initiate the offer from the phone
         }
 
         socket.on("answer") { args ->
             val data = args[0] as JSONObject
             val sdp = data.getString("answer")
-            webRtcManager.handleOffer(sdp) // Note: In streamer role, we handle answer or offer depending on flow. 
-            // Simplified: here we assume the dashboard sends back an answer.
-        }
-        
-        socket.on("offer") { args ->
-            val data = args[0] as JSONObject
-            val sdp = data.getString("offer")
-            webRtcManager.handleOffer(sdp)
+            webRtcManager.handleAnswer(sdp)
         }
 
         socket.on("ice-candidate") { args ->
@@ -77,6 +73,24 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
             )
             webRtcManager.addIceCandidate(candidate)
         }
+    }
+
+    override fun onIceCandidate(candidate: IceCandidate) {
+        val data = JSONObject()
+        data.put("candidate", candidate.sdp)
+        data.put("sdpMid", candidate.sdpMid)
+        data.put("sdpMLineIndex", candidate.sdpMLineIndex)
+        data.put("target", currentViewerId)
+        data.put("roomId", roomId)
+        socket.emit("ice-candidate", data)
+    }
+
+    override fun onLocalDescription(sdp: SessionDescription) {
+        val data = JSONObject()
+        data.put("offer", sdp.description)
+        data.put("target", currentViewerId)
+        data.put("roomId", roomId)
+        socket.emit("offer", data)
     }
 
     private fun startAppTracking() {
@@ -92,37 +106,19 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
         }, 0, 5000)
     }
 
-    private fun createNotification(): Notification {
+    private fun createNotification(): android.app.Notification {
         val channelId = "screen_sharing_channel"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Screen Sharing", NotificationManager.IMPORTANCE_LOW)
-            val manager = getSystemService(NotificationManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(channelId, "Screen Sharing", android.app.NotificationManager.IMPORTANCE_LOW)
+            val manager = getSystemService(android.app.NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
 
-        return NotificationCompat.Builder(this, channelId)
+        return androidx.core.app.NotificationCompat.Builder(this, channelId)
             .setContentTitle("Screen Sharing")
             .setContentText("Your screen is being shared")
             .setSmallIcon(R.mipmap.ic_launcher)
             .build()
-    }
-
-    override fun onIceCandidate(candidate: IceCandidate) {
-        val data = JSONObject()
-        data.put("candidate", candidate.sdp)
-        data.put("sdpMid", candidate.sdpMid)
-        data.put("sdpMLineIndex", candidate.sdpMLineIndex)
-        data.put("target", "VIEWER_ID") // Need to track viewer IDs properly in a real app
-        data.put("roomId", roomId)
-        socket.emit("ice-candidate", data)
-    }
-
-    override fun onLocalDescription(sdp: SessionDescription) {
-        val data = JSONObject()
-        data.put("offer", sdp.description)
-        data.put("target", "VIEWER_ID")
-        data.put("roomId", roomId)
-        socket.emit("offer", data)
     }
 
     override fun onDestroy() {

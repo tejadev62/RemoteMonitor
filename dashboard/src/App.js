@@ -26,11 +26,11 @@ function App() {
     socket.current.on('offer', async (data) => {
       console.log("Received offer from", data.sender);
       createPeerConnection(data.sender);
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(data.offer));
+      await peerConnection.current.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.offer }));
       const answer = await peerConnection.current.createAnswer();
       await peerConnection.current.setLocalDescription(answer);
       socket.current.emit('answer', {
-        answer: answer,
+        answer: answer.sdp,
         target: data.sender,
         roomId: ROOM_ID
       });

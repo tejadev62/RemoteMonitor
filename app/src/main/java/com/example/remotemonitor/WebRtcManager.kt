@@ -80,19 +80,17 @@ class WebRtcManager(
         peerConnection?.addTrack(audioTrack)
     }
 
-    fun handleOffer(sdp: String) {
+    fun handleAnswer(sdp: String) {
         peerConnection?.setRemoteDescription(object : SdpObserver {
             override fun onCreateSuccess(p0: SessionDescription?) {}
-            override fun onSetSuccess() {
-                createAnswer()
-            }
+            override fun onSetSuccess() {}
             override fun onCreateFailure(p0: String?) {}
             override fun onSetFailure(p0: String?) {}
-        }, SessionDescription(SessionDescription.Type.OFFER, sdp))
+        }, SessionDescription(SessionDescription.Type.ANSWER, sdp))
     }
 
-    private fun createAnswer() {
-        peerConnection?.createAnswer(object : SdpObserver {
+    fun createOffer() {
+        peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
                 peerConnection?.setLocalDescription(object : SdpObserver {
                     override fun onCreateSuccess(p0: SessionDescription?) {}
