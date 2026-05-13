@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.remotemonitor"
-        minSdk = 26
+        minSdk = 23
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -25,7 +25,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -41,7 +41,7 @@ dependencies {
     implementation(libs.material)
     
     // WebRTC
-    implementation("io.getstream:stream-webrtc-android:1.3.10")
+    implementation(libs.webrtc)
     
     // Socket.IO
     implementation("io.socket:socket.io-client:2.1.2") {
@@ -49,7 +49,7 @@ dependencies {
     }
 
     // Lifecycle
-    implementation("androidx.lifecycle:lifecycle-service:2.8.7")
+    implementation(libs.androidx.lifecycle.service)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

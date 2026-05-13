@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.os.Parcelable
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import io.socket.client.IO
@@ -37,7 +36,7 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
             intent?.getParcelableExtra("PROJECTION_INTENT", Intent::class.java)
         } else {
             @Suppress("DEPRECATION")
-            intent?.getParcelableExtra<Intent>("PROJECTION_INTENT")
+            intent?.getParcelableExtra("PROJECTION_INTENT")
         }
         if (projectionIntent != null) {
             webRtcManager.startStreaming(projectionIntent)
@@ -74,7 +73,7 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
             val candidate = IceCandidate(
                 data.getString("sdpMid"),
                 data.getInt("sdpMLineIndex"),
-                data.getString("candidate")
+                data.getString("candidate"),
             )
             webRtcManager.addIceCandidate(candidate)
         }
@@ -100,22 +99,28 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
 
     private fun startAppTracking() {
         timer = Timer()
-        timer?.schedule(object : TimerTask() {
-            override fun run() {
-                val currentApp = appTracker.getCurrentApp()
-                val data = JSONObject()
-                data.put("appName", currentApp)
-                data.put("roomId", roomId)
-                socket.emit("current-app", data)
-            }
-        }, 0, 5000)
+        timer?.schedule(
+            object : TimerTask() {
+                override fun run() {
+                    val currentApp = appTracker.getCurrentApp()
+                    val data = JSONObject()
+                    data.put("appName", currentApp)
+                    data.put("roomId", roomId)
+                    socket.emit("current-app", data)
+                }
+            },
+            0,
+            5000,
+        )
     }
 
     private fun createNotification(): android.app.Notification {
         val channelId = "screen_sharing_channel"
-        val channel = NotificationChannel(channelId, "Screen Sharing", NotificationManager.IMPORTANCE_LOW)
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(channelId, "Screen Sharing", NotificationManager.IMPORTANCE_LOW)
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
 
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Screen Sharing")

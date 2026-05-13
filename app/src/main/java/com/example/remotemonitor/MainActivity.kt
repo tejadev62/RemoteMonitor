@@ -1,8 +1,6 @@
 package com.example.remotemonitor
 
-import android.app.Activity
 import android.app.AppOpsManager
-import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Build
@@ -60,8 +58,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun hasUsageStatsPermission(): Boolean {
-        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val appOps = getSystemService(APP_OPS_SERVICE) as AppOpsManager
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            @Suppress("DEPRECATION")
             appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), packageName)
         } else {
             @Suppress("DEPRECATION")
@@ -72,7 +71,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestRuntimePermissions() {
         val permissions = mutableListOf(
-            android.Manifest.permission.RECORD_AUDIO
+            android.Manifest.permission.RECORD_AUDIO,
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -88,6 +87,10 @@ class MainActivity : AppCompatActivity() {
         val serviceIntent = Intent(this, ScreenSharingService::class.java).apply {
             putExtra("PROJECTION_INTENT", projectionIntent)
         }
-        startForegroundService(serviceIntent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
     }
 }
