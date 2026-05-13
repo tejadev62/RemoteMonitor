@@ -45,3 +45,16 @@ To use this over the internet:
 3. Set the build command: `npm install`
 4. Set the start command: `node server.js`
 5. Render will provide a public URL (e.g., `https://your-app.onrender.com`).
+
+## Automatic Updates (GitHub Actions)
+The project is configured to automatically build and release the app.
+1. To trigger a new release, tag your commit and push it:
+   ```bash
+   git tag v1.1
+   git push origin v1.1
+   ```
+2. GitHub Actions will:
+   - Build the release APK.
+   - Create a new GitHub Release with the APK attached.
+   - Update `backend/public/version.json` with the new version info and download link.
+3. Your Android app will then detect the update when the user clicks **"Check for Updates"**.
