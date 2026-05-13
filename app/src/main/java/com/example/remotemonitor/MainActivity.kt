@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mediaProjectionManager: MediaProjectionManager
     private lateinit var updateManager: UpdateManager
+    private var isServiceRunning = false
 
     private val screenCaptureLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -35,8 +36,12 @@ class MainActivity : AppCompatActivity() {
 
         val startButton = findViewById<Button>(R.id.startButton)
         startButton.setOnClickListener {
-            if (checkPermissions()) {
-                startScreenCapture()
+            if (isServiceRunning) {
+                stopAppService()
+            } else {
+                if (checkPermissions()) {
+                    startScreenCapture()
+                }
             }
         }
 
@@ -92,5 +97,14 @@ class MainActivity : AppCompatActivity() {
         } else {
             startService(serviceIntent)
         }
+        isServiceRunning = true
+        findViewById<Button>(R.id.startButton).setText(R.string.stop_sharing)
+    }
+
+    private fun stopAppService() {
+        val serviceIntent = Intent(this, ScreenSharingService::class.java)
+        stopService(serviceIntent)
+        isServiceRunning = false
+        findViewById<Button>(R.id.startButton).setText(R.string.start_sharing)
     }
 }

@@ -88,11 +88,15 @@ class UpdateManager(private val context: Context) {
     }
 
     private fun downloadAndInstall(apkUrl: String) {
+        // Delete old update file if it exists to avoid confusion
+        val oldFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "RemoteMonitor_Update.apk")
+        if (oldFile.exists()) oldFile.delete()
+
         val request = DownloadManager.Request(apkUrl.toUri())
             .setTitle("RemoteMonitor Update")
             .setDescription("Downloading latest version...")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "RemoteMonitor_Update.apk")
+            .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "RemoteMonitor_Update.apk")
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
 
@@ -120,14 +124,31 @@ class UpdateManager(private val context: Context) {
     }
 
     private fun installApk() {
-        val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "RemoteMonitor_Update.apk")
-        if (file.exists()) {
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = "package:${context.packageName}".toUri()
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+                Toast.makeText(context, "Please allow unknown sources and try again", Toast.LENGTH_LONG).show()
+                return
             }
-            context.startActivity(intent)
+        }
+
+        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "RemoteMonitor_Update.apk")
+        if (file.exists()) {
+            try {
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "Error starting installer: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         } else {
             Toast.makeText(context, "Update file not found", Toast.LENGTH_SHORT).show()
         }

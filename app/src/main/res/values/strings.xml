@@ -2,4 +2,7 @@
     <string name="app_name">RemoteMonitor</string>
     <string name="signaling_server_url">https://remotemonitor.onrender.com</string>
     <string name="check_for_updates">Check for Updates</string>
+    <string name="start_sharing">Start Remote Sharing</string>
+    <string name="stop_sharing">Stop Remote Sharing</string>
+    <string name="app_title">Remote Monitor Starter</string>
 </resources>

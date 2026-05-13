@@ -60,7 +60,24 @@ function App() {
   const createPeerConnection = (streamerId) => {
     peerConnection.current = new RTCPeerConnection({
       iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' }
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        {
+          urls: "turn:relay.metered.ca:80",
+          username: "da0987bdebdb3e25b741ccbc",
+          credential: "KO31IJzS23HDgx2C"
+        },
+        {
+          urls: "turn:relay.metered.ca:443",
+          username: "da0987bdebdb3e25b741ccbc",
+          credential: "KO31IJzS23HDgx2C"
+        },
+        {
+          urls: "turn:relay.metered.ca:443?transport=tcp",
+          username: "da0987bdebdb3e25b741ccbc",
+          credential: "KO31IJzS23HDgx2C"
+        }
       ]
     });
 

@@ -54,10 +54,22 @@ class WebRtcManager(
     }
 
     fun createPeerConnection() {
-        val iceServers = listOf(
+        val iceServers = mutableListOf(
             PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
             PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer(),
-            PeerConnection.IceServer.builder("stun:stun2.l.google.com:19302").createIceServer()
+            PeerConnection.IceServer.builder("stun:stun2.l.google.com:19302").createIceServer(),
+            PeerConnection.IceServer.builder("turn:relay.metered.ca:80")
+                .setUsername("da0987bdebdb3e25b741ccbc")
+                .setPassword("KO31IJzS23HDgx2C")
+                .createIceServer(),
+            PeerConnection.IceServer.builder("turn:relay.metered.ca:443")
+                .setUsername("da0987bdebdb3e25b741ccbc")
+                .setPassword("KO31IJzS23HDgx2C")
+                .createIceServer(),
+            PeerConnection.IceServer.builder("turn:relay.metered.ca:443?transport=tcp")
+                .setUsername("da0987bdebdb3e25b741ccbc")
+                .setPassword("KO31IJzS23HDgx2C")
+                .createIceServer(),
         )
 
         val rtcConfig = PeerConnection.RTCConfiguration(iceServers)
