@@ -1,11 +1,11 @@
 package com.example.remotemonitor
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.Parcelable
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import io.socket.client.IO
@@ -33,7 +33,12 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        val projectionIntent = intent?.getParcelableExtra<Intent>("PROJECTION_INTENT")
+        val projectionIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra("PROJECTION_INTENT", Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent?.getParcelableExtra<Intent>("PROJECTION_INTENT")
+        }
         if (projectionIntent != null) {
             webRtcManager.startStreaming(projectionIntent)
             startAppTracking()
@@ -95,7 +100,7 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
 
     private fun startAppTracking() {
         timer = Timer()
-        timer?.scheduleAtFixedRate(object : TimerTask() {
+        timer?.schedule(object : TimerTask() {
             override fun run() {
                 val currentApp = appTracker.getCurrentApp()
                 val data = JSONObject()
@@ -108,13 +113,11 @@ class ScreenSharingService : LifecycleService(), WebRtcManager.WebRtcListener {
 
     private fun createNotification(): android.app.Notification {
         val channelId = "screen_sharing_channel"
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val channel = android.app.NotificationChannel(channelId, "Screen Sharing", android.app.NotificationManager.IMPORTANCE_LOW)
-            val manager = getSystemService(android.app.NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(channelId, "Screen Sharing", NotificationManager.IMPORTANCE_LOW)
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
 
-        return androidx.core.app.NotificationCompat.Builder(this, channelId)
+        return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Screen Sharing")
             .setContentText("Your screen is being shared")
             .setSmallIcon(R.mipmap.ic_launcher)

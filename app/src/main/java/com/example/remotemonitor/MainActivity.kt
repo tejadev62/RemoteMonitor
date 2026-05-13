@@ -18,11 +18,12 @@ import androidx.core.app.ActivityCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var mediaProjectionManager: MediaProjectionManager
+    private lateinit var updateManager: UpdateManager
 
     private val screenCaptureLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
+        ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+        if ((result.resultCode == RESULT_OK) && (result.data != null)) {
             startAppService(result.data!!)
         }
     }
@@ -32,12 +33,18 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         mediaProjectionManager = getSystemService(MediaProjectionManager::class.java)
+        updateManager = UpdateManager(this)
 
         val startButton = findViewById<Button>(R.id.startButton)
         startButton.setOnClickListener {
             if (checkPermissions()) {
                 startScreenCapture()
             }
+        }
+
+        val updateButton = findViewById<Button>(R.id.updateButton)
+        updateButton.setOnClickListener {
+            updateManager.checkForUpdates()
         }
 
         requestRuntimePermissions()
@@ -57,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), packageName)
         } else {
+            @Suppress("DEPRECATION")
             appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), packageName)
         }
         return mode == AppOpsManager.MODE_ALLOWED
@@ -80,10 +88,6 @@ class MainActivity : AppCompatActivity() {
         val serviceIntent = Intent(this, ScreenSharingService::class.java).apply {
             putExtra("PROJECTION_INTENT", projectionIntent)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
+        startForegroundService(serviceIntent)
     }
 }
