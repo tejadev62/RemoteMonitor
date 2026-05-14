@@ -3,7 +3,7 @@ name: Android CI/CD
 on:
   push:
     tags:
-      - 'v*' # Trigger on version tags like v1.1, v1.2, etc.
+      - 'v*'
 
 jobs:
   build:
@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: set up JDK 17
         uses: actions/setup-java@v4
@@ -26,13 +28,16 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleDebug # Building debug for now as requested
+
+      - name: Rename APK
+        run: mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/RemoteMonitor_${{ github.ref_name }}.apk
 
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/app-release-unsigned.apk # Or app-release.apk if signed
+          files: app/build/outputs/apk/debug/RemoteMonitor_${{ github.ref_name }}.apk
           name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref }}
           draft: false
@@ -43,8 +48,11 @@ jobs:
       - name: Update version.json
         run: |
           VERSION_NAME=$(echo ${{ github.ref_name }} | sed 's/v//')
-          VERSION_CODE=$(date +%s) # Simple way to generate a unique version code
-          APK_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/app-release-unsigned.apk"
+          VERSION_CODE=$(date +%s)
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/RemoteMonitor_${{ github.ref_name }}.apk"
+          
+          # Ensure public directory exists
+          mkdir -p backend/public
           
           # Create or Update version.json
           cat <<EOF > backend/public/version.json
@@ -60,6 +68,8 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git pull origin main
           git add backend/public/version.json
           git commit -m "Update version.json to ${{ github.ref_name }}"
           git push origin main

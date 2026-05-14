@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.widget.Toast
@@ -88,42 +89,49 @@ class UpdateManager(private val context: Context) {
     }
 
     private fun downloadAndInstall(apkUrl: String) {
-        // Delete old update file if it exists to avoid confusion
-        val oldFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "RemoteMonitor_Update.apk")
-        if (oldFile.exists()) oldFile.delete()
+        try {
+            // Use internal cache directory to avoid permission issues and ensure clean state
+            val updateFile = File(context.cacheDir, "RemoteMonitor_Update.apk")
+            if (updateFile.exists()) {
+                updateFile.delete()
+            }
 
-        val request = DownloadManager.Request(apkUrl.toUri())
-            .setTitle("RemoteMonitor Update")
-            .setDescription("Downloading latest version...")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "RemoteMonitor_Update.apk")
-            .setAllowedOverMetered(true)
-            .setAllowedOverRoaming(true)
+            val request = DownloadManager.Request(apkUrl.toUri())
+                .setTitle("RemoteMonitor Update")
+                .setDescription("Downloading latest version...")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationUri(Uri.fromFile(updateFile))
+                .setAllowedOverMetered(true)
+                .setAllowedOverRoaming(true)
 
-        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val downloadId = downloadManager.enqueue(request)
+            val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val downloadId = downloadManager.enqueue(request)
 
-        val onComplete = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
-                if (id == downloadId) {
-                    context.unregisterReceiver(this)
-                    installApk()
+            val onComplete = object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
+                    if (id == downloadId) {
+                        context.unregisterReceiver(this)
+                        installApk(updateFile)
+                    }
                 }
             }
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.registerReceiver(context, onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                context.registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+            }
+            
+            Toast.makeText(context, "Update download started...", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Failed to start download: ${e.message}", Toast.LENGTH_LONG).show()
         }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.registerReceiver(context, onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
-        }
-        
-        Toast.makeText(context, "Update download started...", Toast.LENGTH_SHORT).show()
     }
 
-    private fun installApk() {
+    private fun installApk(file: File) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!context.packageManager.canRequestPackageInstalls()) {
                 val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
@@ -136,7 +144,6 @@ class UpdateManager(private val context: Context) {
             }
         }
 
-        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "RemoteMonitor_Update.apk")
         if (file.exists()) {
             try {
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
