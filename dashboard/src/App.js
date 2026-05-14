@@ -39,7 +39,17 @@ function App() {
     socket.current.on('ice-candidate', (data) => {
       console.log("Received ICE candidate");
       if (peerConnection.current) {
-        peerConnection.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+        try {
+          // Ensure the candidate is properly formatted for the browser
+          const candidate = new RTCIceCandidate({
+            candidate: data.candidate,
+            sdpMid: data.sdpMid,
+            sdpMLineIndex: data.sdpMLineIndex
+          });
+          peerConnection.current.addIceCandidate(candidate);
+        } catch (e) {
+          console.error("Error adding ice candidate", e);
+        }
       }
     });
 
